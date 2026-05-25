@@ -375,17 +375,21 @@
 
 <script>
   // =============================================
-  // 설정: 본인의 값으로 교체하세요
+  // 설정
   // =============================================
   const SPREADSHEET_ID = "1xrS6VXDO0sxOWDkBsrHJFsVGvXm_44CrkHikzUg4qIQ";
   const SHEET_NAME = "벌점기록";
-  const API_KEY = "AIzaSyD3Sy4xmbGcM1eTT-4BDB8UqTBUdR9P-HM"; // Google Sheets API 키
+  const API_KEY = "YOUR_API_KEY";
   // =============================================
 
   let parsedData = [];
 
+  // =========================
+  // 입력 파싱
+  // =========================
   function parseInput() {
     const raw = document.getElementById("rawInput").value.trim();
+
     const errorEl = document.getElementById("parseError");
     errorEl.style.display = "none";
 
@@ -395,25 +399,26 @@
       return;
     }
 
-    // * 기준으로 항목 분리 (여러 명) 또는 전체를 하나로 처리 (한 명)
-    let blocks = [];
-    if (raw.includes("*")) {
-      blocks = raw.split(/^\s*\*\s*/m).filter(b => b.trim());
-    } else {
-      blocks = [raw];
-    }
+    // 날짜 시작 기준으로 자동 분리
+    const blocks = raw
+      .split(/(?=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
+      .filter(b => b.trim());
 
     const results = [];
-    const errors = [];
 
     blocks.forEach((block, i) => {
-      const lines = block.trim().split("\n").map(l => l.trim()).filter(l => l);
       try {
-        const result = parseBlock(lines);
-        results.push({ ...result, hasError: false });
+        const result = parseBlock(block);
+        results.push({
+          ...result,
+          hasError: false
+        });
       } catch (e) {
-        results.push({ raw: block.trim(), hasError: true, errorMsg: e.message });
-        errors.push(`${i + 1}번째 항목: ${e.message}`);
+        results.push({
+          raw: block.trim(),
+          hasError: true,
+          errorMsg: e.message
+        });
       }
     });
 
@@ -427,74 +432,169 @@
     renderPreview(results);
   }
 
-  function parseBlock(lines) {
-    // 1번째 줄: 날짜시간 + 학년반번호이름
-    const line1 = lines[0];
-    const dateMatch = line1.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
-    if (!dateMatch) throw new Error("날짜/시간을 찾을 수 없습니다");
+  // =========================
+  // 개별 블록 파싱
+  // =========================
+  function parseBlock(block) {
+
+    // 줄바꿈 정리
+    const text = block
+      .replace(/\r/g, "")
+      .replace(/\n+/g, "\n")
+      .trim();
+
+    // 날짜
+    const dateMatch = text.match(
+      /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/
+    );
+
+    if (!dateMatch) {
+      throw new Error("날짜/시간을 찾을 수 없습니다");
+    }
+
     const datetime = dateMatch[1];
 
-    const numMatch = line1.match(/(\d{2})번호/);
-    if (!numMatch) throw new Error("학생 번호를 찾을 수 없습니다");
-    const studentNum = parseInt(numMatch[1], 10); // 앞자리 0 제거
+    // 학생 번호
+    const numMatch = text.match(/(\d{2})번호/);
 
-    // 2번째 줄: 등록자 벌점 항목
-    const line2 = lines[1];
-    const itemMatch = line2.match(/벌점\s+(.+)/);
-    if (!itemMatch) throw new Error("벌점 항목을 찾을 수 없습니다");
+    if (!numMatch) {
+      throw new Error("학생 번호를 찾을 수 없습니다");
+    }
+
+    const studentNum = parseInt(numMatch[1], 10);
+
+    // 벌점 항목
+    const itemMatch = text.match(
+      /벌점\s+(.+?)(?=\n-?\d+\n점수)/s
+    );
+
+    if (!itemMatch) {
+      throw new Error("벌점 항목을 찾을 수 없습니다");
+    }
+
     const item = itemMatch[1].trim();
 
-    // 3번째 줄: 점수 (-1점수)
-    const line3 = lines[2];
-    if (!line3) throw new Error("점수 줄을 찾을 수 없습니다");
-    const scoreMatch = line3.match(/-?(\d+)점수/);
-    if (!scoreMatch) throw new Error("점수를 찾을 수 없습니다");
-    const score = parseInt(scoreMatch[1], 10); // 양수로 저장
+    // 점수
+    const scoreMatch = text.match(
+      /\n(-?\d+)\n점수/
+    );
 
-    return { datetime, studentNum, item, score };
+    if (!scoreMatch) {
+      throw new Error("점수를 찾을 수 없습니다");
+    }
+
+    const score = Math.abs(
+      parseInt(scoreMatch[1], 10)
+    );
+
+    return {
+      datetime,
+      studentNum,
+      item,
+      score
+    };
   }
 
+  // =========================
+  // 미리보기 렌더링
+  // =========================
   function renderPreview(data) {
+
     const tbody = document.getElementById("previewBody");
     const countEl = document.getElementById("previewCount");
     const section = document.getElementById("preview-section");
 
-    const validCount = data.filter(d => !d.hasError).length;
+    const validCount = data.filter(
+      d => !d.hasError
+    ).length;
+
     countEl.textContent = `${validCount}건`;
 
     tbody.innerHTML = data.map(row => {
+
       if (row.hasError) {
         return `
           <tr class="error-row">
             <td colspan="4">
-              <span style="color:var(--danger)">⚠ 파싱 실패</span>
-              <div class="error-msg">${row.errorMsg}</div>
-              <div style="font-size:12px;color:var(--text-dim);margin-top:4px;font-family:'JetBrains Mono',monospace">${row.raw.substring(0, 80)}...</div>
+              <span style="color:var(--danger)">
+                ⚠ 파싱 실패
+              </span>
+
+              <div class="error-msg">
+                ${row.errorMsg}
+              </div>
+
+              <div style="
+                font-size:12px;
+                color:var(--text-dim);
+                margin-top:4px;
+                font-family:'JetBrains Mono',monospace
+              ">
+                ${row.raw.substring(0, 120)}...
+              </div>
             </td>
-          </tr>`;
+          </tr>
+        `;
       }
+
       return `
         <tr>
-          <td><span class="date-text">${row.datetime}</span></td>
-          <td><span class="num-badge">${row.studentNum}</span></td>
-          <td><span class="item-text">${row.item}</span></td>
-          <td><span class="score-badge">-${row.score}</span></td>
-        </tr>`;
+          <td>
+            <span class="date-text">
+              ${row.datetime}
+            </span>
+          </td>
+
+          <td>
+            <span class="num-badge">
+              ${row.studentNum}
+            </span>
+          </td>
+
+          <td>
+            <span class="item-text">
+              ${row.item}
+            </span>
+          </td>
+
+          <td>
+            <span class="score-badge">
+              -${row.score}
+            </span>
+          </td>
+        </tr>
+      `;
     }).join("");
 
     section.style.display = "block";
-    section.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // 오류 있으면 저장 버튼 비활성화
-    const hasErrors = data.some(d => d.hasError);
+    section.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+    // 오류 있으면 저장 막기
+    const hasErrors = data.some(
+      d => d.hasError
+    );
+
     document.getElementById("saveBtn").disabled = hasErrors;
+
     if (hasErrors) {
-      document.getElementById("saveBtn").title = "파싱 오류가 있는 항목이 있습니다. 다시 확인해주세요.";
+      document.getElementById("saveBtn").title =
+        "파싱 오류가 있는 항목이 있습니다.";
     }
   }
 
+  // =========================
+  // 구글 시트 저장
+  // =========================
   async function saveToSheet() {
-    const validData = parsedData.filter(d => !d.hasError);
+
+    const validData = parsedData.filter(
+      d => !d.hasError
+    );
+
     if (validData.length === 0) return;
 
     const btn = document.getElementById("saveBtn");
@@ -503,12 +603,14 @@
     const resultEl = document.getElementById("saveResult");
 
     btn.disabled = true;
+
     spinner.style.display = "inline-block";
     btnText.textContent = "저장 중...";
+
     resultEl.style.display = "none";
 
     try {
-      // 배치 업데이트용 values 배열 구성
+
       const values = validData.map(row => [
         row.datetime,
         row.studentNum,
@@ -516,48 +618,89 @@
         row.score
       ]);
 
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}:append?valueInputOption=USER_ENTERED&key=${API_KEY}`;
+      const url =
+        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}:append?valueInputOption=USER_ENTERED&key=${API_KEY}`;
 
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values })
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+          values
+        })
       });
 
       if (!response.ok) {
+
         const err = await response.json();
-        throw new Error(err.error?.message || "API 오류");
+
+        throw new Error(
+          err.error?.message || "API 오류"
+        );
       }
 
-      resultEl.className = "save-result success";
-      resultEl.textContent = `✓ ${validData.length}건 저장 완료`;
+      resultEl.className =
+        "save-result success";
+
+      resultEl.textContent =
+        `✓ ${validData.length}건 저장 완료`;
+
       resultEl.style.display = "block";
+
       btnText.textContent = "저장 완료";
 
-      // 3초 후 초기화
-      setTimeout(() => resetAll(), 3000);
+      setTimeout(() => {
+        resetAll();
+      }, 3000);
 
     } catch (e) {
-      resultEl.className = "save-result error";
-      resultEl.textContent = `저장 실패: ${e.message}`;
+
+      resultEl.className =
+        "save-result error";
+
+      resultEl.textContent =
+        `오류: ${e.message}`;
+
       resultEl.style.display = "block";
 
       btn.disabled = false;
+
       spinner.style.display = "none";
-      btnText.textContent = "구글 시트에 저장";
+
+      btnText.textContent =
+        "구글 시트에 저장";
     }
   }
 
+  // =========================
+  // 초기화
+  // =========================
   function resetAll() {
+
     document.getElementById("rawInput").value = "";
-    document.getElementById("preview-section").style.display = "none";
-    document.getElementById("parseError").style.display = "none";
-    document.getElementById("saveResult").style.display = "none";
-    document.getElementById("saveBtn").disabled = false;
-    document.getElementById("spinner").style.display = "none";
-    document.getElementById("saveBtnText").textContent = "구글 시트에 저장";
+
+    document.getElementById("preview-section").style.display =
+      "none";
+
+    document.getElementById("parseError").style.display =
+      "none";
+
+    document.getElementById("saveResult").style.display =
+      "none";
+
+    document.getElementById("saveBtn").disabled =
+      false;
+
+    document.getElementById("saveBtnText").textContent =
+      "구글 시트에 저장";
+
+    document.getElementById("spinner").style.display =
+      "none";
+
     parsedData = [];
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 </script>
 
