@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>벌점 입력</title>
+  <title>상벌점 입력</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👎</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0f1117;
       --surface: #1a1d27;
-      --surface2: #222533;
       --border: #2e3347;
       --accent: #4f7cff;
       --accent-dim: rgba(79, 124, 255, 0.12);
@@ -18,6 +17,8 @@
       --danger-dim: rgba(255, 92, 92, 0.1);
       --success: #3dd68c;
       --success-dim: rgba(61, 214, 140, 0.1);
+      --reward: #f5a623;
+      --reward-dim: rgba(245, 166, 35, 0.12);
       --sheet: #1fa355;
       --sheet-dim: rgba(31, 163, 85, 0.12);
       --text: #e8eaf0;
@@ -35,12 +36,9 @@
       padding: 40px 20px;
     }
 
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-    }
+    .container { max-width: 720px; margin: 0 auto; }
 
-    /* ── 상단 헤더 ── */
+    /* ── 헤더 ── */
     header {
       display: flex;
       align-items: flex-start;
@@ -49,8 +47,6 @@
       margin-bottom: 40px;
       flex-wrap: wrap;
     }
-
-    .header-left {}
 
     .header-label {
       font-family: 'JetBrains Mono', monospace;
@@ -61,14 +57,8 @@
       margin-bottom: 10px;
     }
 
-    h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
-    }
+    h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
 
-    /* ── 구글 시트 바로가기 버튼 ── */
     .sheet-link {
       display: inline-flex;
       align-items: center;
@@ -78,7 +68,6 @@
       background: var(--sheet-dim);
       border: 1px solid rgba(31, 163, 85, 0.35);
       color: var(--sheet);
-      font-family: 'Noto Sans KR', sans-serif;
       font-size: 13px;
       font-weight: 700;
       text-decoration: none;
@@ -87,24 +76,15 @@
       flex-shrink: 0;
       margin-top: 6px;
     }
-
     .sheet-link:hover {
       background: rgba(31, 163, 85, 0.22);
       border-color: var(--sheet);
       transform: translateY(-1px);
       box-shadow: 0 4px 16px rgba(31, 163, 85, 0.15);
     }
+    .sheet-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
-    .sheet-link:active {
-      transform: translateY(0);
-    }
-
-    .sheet-icon {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-    }
-
+    /* ── 카드 ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -137,10 +117,10 @@
       transition: border-color 0.2s;
       outline: none;
     }
-
     textarea:focus { border-color: var(--accent); }
     textarea::placeholder { color: var(--text-dim); }
 
+    /* ── 버튼 ── */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -154,7 +134,6 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-
     .btn-primary {
       background: var(--accent);
       color: white;
@@ -164,17 +143,14 @@
       font-size: 16px;
       padding: 16px;
     }
-
     .btn-primary:hover { background: #6b91ff; transform: translateY(-1px); }
     .btn-primary:active { transform: translateY(0); }
-
     .btn-primary:disabled {
       background: var(--border);
       color: var(--text-dim);
       cursor: not-allowed;
       transform: none;
     }
-
     .btn-ghost {
       background: transparent;
       border: 1px solid var(--border);
@@ -182,7 +158,6 @@
       font-size: 13px;
       padding: 8px 16px;
     }
-
     .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
 
     /* ── 미리보기 ── */
@@ -195,20 +170,27 @@
       margin-bottom: 16px;
     }
 
-    .preview-count {
+    /* 상벌점 카운트 배지 묶음 */
+    .count-badges {
+      display: flex;
+      gap: 8px;
+    }
+    .count-badge {
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
-      background: var(--accent-dim);
-      color: var(--accent);
       padding: 4px 12px;
       border-radius: 20px;
     }
-
-    .preview-table {
-      width: 100%;
-      border-collapse: collapse;
+    .count-badge.penalty {
+      background: var(--danger-dim);
+      color: var(--danger);
+    }
+    .count-badge.reward {
+      background: var(--reward-dim);
+      color: var(--reward);
     }
 
+    .preview-table { width: 100%; border-collapse: collapse; }
     .preview-table th {
       font-size: 11px;
       letter-spacing: 1px;
@@ -219,16 +201,16 @@
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
-
     .preview-table td {
       padding: 14px 12px;
       font-size: 14px;
       border-bottom: 1px solid var(--border);
       vertical-align: top;
     }
-
     .preview-table tr:last-child td { border-bottom: none; }
     .preview-table tr.error-row td { background: var(--danger-dim); }
+    .preview-table tr.reward-row { border-left: 2px solid var(--reward); }
+    .preview-table tr.penalty-row { border-left: 2px solid var(--danger); }
 
     .num-badge {
       font-family: 'JetBrains Mono', monospace;
@@ -237,14 +219,38 @@
       color: var(--accent);
     }
 
+    /* 상점/벌점 점수 배지 색 구분 */
     .score-badge {
       font-family: 'JetBrains Mono', monospace;
       font-weight: 600;
-      color: var(--danger);
-      background: var(--danger-dim);
       padding: 3px 10px;
       border-radius: 6px;
       font-size: 14px;
+    }
+    .score-badge.penalty {
+      color: var(--danger);
+      background: var(--danger-dim);
+    }
+    .score-badge.reward {
+      color: var(--reward);
+      background: var(--reward-dim);
+    }
+
+    /* 상점/벌점 타입 배지 */
+    .type-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .type-badge.penalty {
+      color: var(--danger);
+      background: var(--danger-dim);
+    }
+    .type-badge.reward {
+      color: var(--reward);
+      background: var(--reward-dim);
     }
 
     .date-text {
@@ -252,20 +258,9 @@
       font-size: 12px;
       color: var(--text-muted);
     }
+    .item-text { color: var(--text); line-height: 1.5; max-width: 280px; }
+    .error-msg { font-size: 12px; color: var(--danger); margin-top: 4px; }
 
-    .item-text {
-      color: var(--text);
-      line-height: 1.5;
-      max-width: 340px;
-    }
-
-    .error-msg {
-      font-size: 12px;
-      color: var(--danger);
-      margin-top: 4px;
-    }
-
-    /* ── 파싱 오류 ── */
     .parse-error {
       background: var(--danger-dim);
       border: 1px solid rgba(255, 92, 92, 0.3);
@@ -277,7 +272,6 @@
       display: none;
     }
 
-    /* ── 저장 결과 ── */
     .save-result {
       border-radius: 10px;
       padding: 16px 20px;
@@ -286,47 +280,35 @@
       margin-top: 16px;
       display: none;
       text-align: center;
+      line-height: 1.7;
     }
-
     .save-result.success {
       background: var(--success-dim);
       border: 1px solid rgba(61, 214, 140, 0.3);
       color: var(--success);
     }
-
     .save-result.error {
       background: var(--danger-dim);
       border: 1px solid rgba(255, 92, 92, 0.3);
       color: var(--danger);
     }
 
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 20px 0;
-    }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
 
-    .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
+    .actions { display: flex; gap: 10px; margin-top: 20px; }
     .actions .btn-primary { margin-top: 0; }
 
     .spinner {
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       border: 2px solid rgba(255,255,255,0.3);
       border-top-color: white;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       display: none;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── 하단 푸터 ── */
+    /* ── 푸터 ── */
     footer {
       margin-top: 40px;
       padding-top: 24px;
@@ -337,14 +319,12 @@
       flex-wrap: wrap;
       gap: 12px;
     }
-
     .footer-label {
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       color: var(--text-dim);
       letter-spacing: 1px;
     }
-
     .sheet-link-footer {
       display: inline-flex;
       align-items: center;
@@ -354,13 +334,11 @@
       background: var(--sheet-dim);
       border: 1px solid rgba(31, 163, 85, 0.35);
       color: var(--sheet);
-      font-family: 'Noto Sans KR', sans-serif;
       font-size: 13px;
       font-weight: 700;
       text-decoration: none;
       transition: all 0.2s;
     }
-
     .sheet-link-footer:hover {
       background: rgba(31, 163, 85, 0.22);
       border-color: var(--sheet);
@@ -370,23 +348,17 @@
   </style>
 </head>
 <body>
-
 <div class="container">
 
   <!-- ── 헤더 ── -->
   <header>
-    <div class="header-left">
+    <div>
       <div class="header-label">Class Management</div>
-      <h1>벌점 입력</h1>
+      <h1>상벌점 입력</h1>
     </div>
-
-    <a
-      class="sheet-link"
-      href="https://docs.google.com/spreadsheets/d/1xrS6VXDO0sxOWDkBsrHJFsVGvXm_44CrkHikzUg4qIQ/edit"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <!-- Google Sheets 아이콘 (SVG inline) -->
+    <a class="sheet-link"
+       href="https://docs.google.com/spreadsheets/d/1xrS6VXDO0sxOWDkBsrHJFsVGvXm_44CrkHikzUg4qIQ/edit"
+       target="_blank" rel="noopener noreferrer">
       <svg class="sheet-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="3" y="3" width="18" height="18" rx="2" fill="#1fa355" opacity="0.2"/>
         <rect x="3" y="3" width="18" height="18" rx="2" stroke="#1fa355" stroke-width="1.5"/>
@@ -402,16 +374,20 @@
   <!-- ── 입력 카드 ── -->
   <div class="card">
     <div class="card-title">텍스트 붙여넣기</div>
-    <textarea
-      id="rawInput"
-      placeholder="학교 사이트에서 복사한 내용을 붙여넣으세요.
+    <textarea id="rawInput" placeholder="학교 사이트에서 복사한 내용을 붙여넣으세요.
+상점과 벌점이 섞여 있어도 자동으로 분리됩니다.
 
 예시)
-2026-03-01 14:59:00 3학년 02반 00번호 OOO
-등록: OOO 벌점 실내외 소란 행위(...)
--1점수
--5합계"
-    ></textarea>
+2026-03-01 14:59:00 3학년 02반 05번호 OOO
+등록: OOO 상점 모범적인 행동을 함
+
+2
+점수
+2026-03-01 15:30:00 3학년 02반 12번호 OOO
+등록: OOO 벌점 실내외 소란 행위
+
+-1
+점수"></textarea>
     <div class="parse-error" id="parseError"></div>
     <button class="btn btn-primary" onclick="parseInput()">파싱하기</button>
   </div>
@@ -420,13 +396,17 @@
   <div class="card" id="preview-section">
     <div class="preview-header">
       <div class="card-title" style="margin-bottom:0">입력 확인</div>
-      <span class="preview-count" id="previewCount">0건</span>
+      <div class="count-badges">
+        <span class="count-badge reward" id="rewardCount" style="display:none"></span>
+        <span class="count-badge penalty" id="penaltyCount" style="display:none"></span>
+      </div>
     </div>
 
     <div style="overflow-x: auto;">
       <table class="preview-table">
         <thead>
           <tr>
+            <th>구분</th>
             <th>날짜/시간</th>
             <th>번호</th>
             <th>항목</th>
@@ -450,15 +430,12 @@
     <div class="save-result" id="saveResult"></div>
   </div>
 
-  <!-- ── 하단 푸터 ── -->
+  <!-- ── 푸터 ── -->
   <footer>
-    <span class="footer-label">벌점기록 스프레드시트</span>
-    <a
-      class="sheet-link-footer"
-      href="https://docs.google.com/spreadsheets/d/1xrS6VXDO0sxOWDkBsrHJFsVGvXm_44CrkHikzUg4qIQ/edit"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
+    <span class="footer-label">상벌점 스프레드시트</span>
+    <a class="sheet-link-footer"
+       href="https://docs.google.com/spreadsheets/d/1xrS6VXDO0sxOWDkBsrHJFsVGvXm_44CrkHikzUg4qIQ/edit"
+       target="_blank" rel="noopener noreferrer">
       <svg class="sheet-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="3" y="3" width="18" height="18" rx="2" fill="#1fa355" opacity="0.2"/>
         <rect x="3" y="3" width="18" height="18" rx="2" stroke="#1fa355" stroke-width="1.5"/>
@@ -474,11 +451,7 @@
 </div>
 
 <script>
-  // =============================================
-  // API 엔드포인트 (Vercel Serverless Function)
-  // =============================================
   const API_ENDPOINT = "/api/save";
-
   let parsedData = [];
 
   // =========================
@@ -500,7 +473,6 @@
       .filter(b => b.trim());
 
     const results = [];
-
     blocks.forEach(block => {
       try {
         results.push({ ...parseBlock(block), hasError: false });
@@ -533,15 +505,22 @@
     if (!numMatch) throw new Error("학생 번호를 찾을 수 없습니다");
     const studentNum = parseInt(numMatch[1], 10);
 
-    const itemMatch = text.match(/벌점\s+(.+?)(?=\n-?\d+\n점수)/s);
-    if (!itemMatch) throw new Error("벌점 항목을 찾을 수 없습니다");
-    const item = itemMatch[1].trim();
+    // 상점/벌점 구분
+    const typeMatch = text.match(/등록:.+?(벌점|상점)/);
+    if (!typeMatch) throw new Error("상점/벌점 구분을 찾을 수 없습니다");
+    const type = typeMatch[1]; // "벌점" | "상점"
+
+    // 항목 파싱 — "-" 허용
+    const itemMatch = text.match(/(?:벌점|상점)\s+(.+?)(?=\n-?\d+\n점수)/s);
+    if (!itemMatch) throw new Error("항목을 찾을 수 없습니다");
+    const rawItem = itemMatch[1].trim();
+    const item = rawItem === "-" ? "(항목 없음)" : rawItem;
 
     const scoreMatch = text.match(/\n(-?\d+)\n점수/);
     if (!scoreMatch) throw new Error("점수를 찾을 수 없습니다");
     const score = Math.abs(parseInt(scoreMatch[1], 10));
 
-    return { datetime, studentNum, item, score };
+    return { datetime, studentNum, item, score, type };
   }
 
   // =========================
@@ -549,17 +528,33 @@
   // =========================
   function renderPreview(data) {
     const tbody = document.getElementById("previewBody");
-    const countEl = document.getElementById("previewCount");
     const section = document.getElementById("preview-section");
 
-    const validCount = data.filter(d => !d.hasError).length;
-    countEl.textContent = `${validCount}건`;
+    const valid = data.filter(d => !d.hasError);
+    const penaltyCount = valid.filter(d => d.type === "벌점").length;
+    const rewardCount  = valid.filter(d => d.type === "상점").length;
+
+    const penaltyEl = document.getElementById("penaltyCount");
+    const rewardEl  = document.getElementById("rewardCount");
+
+    if (penaltyCount > 0) {
+      penaltyEl.textContent = `벌점 ${penaltyCount}건`;
+      penaltyEl.style.display = "inline-block";
+    } else {
+      penaltyEl.style.display = "none";
+    }
+    if (rewardCount > 0) {
+      rewardEl.textContent = `상점 ${rewardCount}건`;
+      rewardEl.style.display = "inline-block";
+    } else {
+      rewardEl.style.display = "none";
+    }
 
     tbody.innerHTML = data.map(row => {
       if (row.hasError) {
         return `
           <tr class="error-row">
-            <td colspan="4">
+            <td colspan="5">
               <span style="color:var(--danger)">⚠ 파싱 실패</span>
               <div class="error-msg">${row.errorMsg}</div>
               <div style="font-size:12px;color:var(--text-dim);margin-top:4px;font-family:'JetBrains Mono',monospace">
@@ -568,12 +563,19 @@
             </td>
           </tr>`;
       }
+
+      const isPenalty = row.type === "벌점";
+      const rowClass  = isPenalty ? "penalty-row" : "reward-row";
+      const scoreSign = isPenalty ? `-${row.score}` : `+${row.score}`;
+      const badgeClass = isPenalty ? "penalty" : "reward";
+
       return `
-        <tr>
+        <tr class="${rowClass}">
+          <td><span class="type-badge ${badgeClass}">${row.type}</span></td>
           <td><span class="date-text">${row.datetime}</span></td>
           <td><span class="num-badge">${row.studentNum}</span></td>
           <td><span class="item-text">${row.item}</span></td>
-          <td><span class="score-badge">-${row.score}</span></td>
+          <td><span class="score-badge ${badgeClass}">${scoreSign}</span></td>
         </tr>`;
     }).join("");
 
@@ -582,19 +584,16 @@
 
     const hasErrors = data.some(d => d.hasError);
     document.getElementById("saveBtn").disabled = hasErrors;
-    if (hasErrors) {
-      document.getElementById("saveBtn").title = "파싱 오류가 있는 항목이 있습니다.";
-    }
   }
 
   // =========================
-  // Vercel API로 저장
+  // Vercel API로 저장 (상점/벌점 분리)
   // =========================
   async function saveToSheet() {
-    const validData = parsedData.filter(d => !d.hasError);
-    if (validData.length === 0) return;
+    const valid = parsedData.filter(d => !d.hasError);
+    if (valid.length === 0) return;
 
-    const btn = document.getElementById("saveBtn");
+    const btn     = document.getElementById("saveBtn");
     const spinner = document.getElementById("spinner");
     const btnText = document.getElementById("saveBtnText");
     const resultEl = document.getElementById("saveResult");
@@ -605,28 +604,34 @@
     resultEl.style.display = "none";
 
     try {
-      // 오래된 순(역순)으로 저장 — 붙여넣은 텍스트에서 아래쪽이 더 오래된 데이터
-      const values = validData.reverse().map(row => [
-        row.datetime,
-        row.studentNum,
-        row.item,
-        row.score
-      ]);
+      // 오래된 순(역순)으로 정렬
+      const sorted = [...valid].reverse();
 
+      const penaltyValues = sorted
+        .filter(r => r.type === "벌점")
+        .map(r => [r.datetime, r.studentNum, r.item, r.score]);
+
+      const rewardValues = sorted
+        .filter(r => r.type === "상점")
+        .map(r => [r.datetime, r.studentNum, r.item, r.score]);
+
+      // 상점/벌점 한 번에 전송
       const response = await fetch(API_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values })
+        body: JSON.stringify({ penaltyValues, rewardValues })
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "저장 실패");
 
-      if (!response.ok) {
-        throw new Error(data.error || "저장 실패");
-      }
+      // 결과 메시지 — 저장된 종류만 표시
+      const lines = [];
+      if (penaltyValues.length > 0) lines.push(`벌점 ${penaltyValues.length}건`);
+      if (rewardValues.length  > 0) lines.push(`상점 ${rewardValues.length}건`);
 
       resultEl.className = "save-result success";
-      resultEl.textContent = `✓ ${validData.length}건 저장 완료`;
+      resultEl.textContent = `✓ ${lines.join(", ")} 저장 완료`;
       resultEl.style.display = "block";
       btnText.textContent = "저장 완료";
 
