@@ -7,43 +7,54 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-  const SHEET_NAME = "벌점기록";
 
   try {
-    // ── Service Account JSON 파싱 ──
     const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-
-    // ── Access Token 발급 ──
     const token = await getAccessToken(serviceAccount);
 
-    // ── 데이터 저장 ──
-    const { values } = req.body;
-    if (!values || !Array.isArray(values) || values.length === 0) {
-      return res.status(400).json({ error: "저장할 데이터가 없습니다." });
+    const { penaltyValues, rewardValues } = req.body;
+
+    const results = {};
+
+    // 벌점 저장
+    if (penaltyValues && penaltyValues.length > 0) {
+      results.penalty = await appendToSheet(SPREADSHEET_ID, "벌점기록", penaltyValues, token);
     }
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}:append?valueInputOption=USER_ENTERED`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({ values }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || "Google Sheets API 오류");
+    // 상점 저장
+    if (rewardValues && rewardValues.length > 0) {
+      results.reward = await appendToSheet(SPREADSHEET_ID, "상점기록", rewardValues, token);
     }
 
-    const result = await response.json();
-    return res.status(200).json({ success: true, updatedRange: result.updates?.updatedRange });
+    return res.status(200).json({ success: true, results });
 
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
+}
+
+// =============================================
+// 시트에 데이터 추가
+// =============================================
+async function appendToSheet(spreadsheetId, sheetName, values, token) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}:append?valueInputOption=USER_ENTERED`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ values }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(`[${sheetName}] ${err.error?.message || "API 오류"}`);
+  }
+
+  const result = await response.json();
+  return result.updates?.updatedRange;
 }
 
 // =============================================
@@ -52,7 +63,7 @@ export default async function handler(req, res) {
 async function getAccessToken(serviceAccount) {
   const now = Math.floor(Date.now() / 1000);
 
-  const header = { alg: "RS256", typ: "JWT" };
+  const header  = { alg: "RS256", typ: "JWT" };
   const payload = {
     iss: serviceAccount.client_email,
     scope: "https://www.googleapis.com/auth/spreadsheets",
@@ -63,26 +74,20 @@ async function getAccessToken(serviceAccount) {
 
   const encode = obj =>
     btoa(JSON.stringify(obj))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
   const unsignedJWT = `${encode(header)}.${encode(payload)}`;
 
-  // RSA-SHA256 서명
   const privateKey = await importPrivateKey(serviceAccount.private_key);
-  const signature = await crypto.subtle.sign(
+  const signature  = await crypto.subtle.sign(
     { name: "RSASSA-PKCS1-v1_5" },
     privateKey,
     new TextEncoder().encode(unsignedJWT)
   );
 
   const signedJWT = `${unsignedJWT}.${btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "")}`;
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
 
-  // Access Token 교환
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
