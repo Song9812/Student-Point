@@ -1,0 +1,9 @@
+{
+  "name": "penalty-app",
+  "version": "1.0.0",
+  "description": "Class penalty management app",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
