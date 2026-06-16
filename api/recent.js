@@ -12,21 +12,22 @@ export default async function handler(req, res) {
     const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
     const token = await getAccessToken(serviceAccount);
 
-    // 벌점기록 + 상점기록 병렬 조회
-    const [penaltyRows, rewardRows] = await Promise.all([
-      fetchSheet(SPREADSHEET_ID, "벌점기록", token),
-      fetchSheet(SPREADSHEET_ID, "상점기록", token),
+    // 두 시트의 마지막 행만 각각 조회
+    const [lastPenalty, lastReward] = await Promise.all([
+      fetchLastRow(SPREADSHEET_ID, "벌점기록", token),
+      fetchLastRow(SPREADSHEET_ID, "상점기록", token),
     ]);
 
-    // 각각 타입 태그 추가 후 합치기
-    const all = [
-      ...penaltyRows.map(r => ({ ...r, type: "벌점" })),
-      ...rewardRows.map(r =>  ({ ...r, type: "상점" })),
-    ];
+    // 둘 중 더 최근 것 하나만 반환
+    let recent = null;
 
-    // 날짜 기준 내림차순 정렬 후 상위 5개
-    all.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
-    const recent = all.slice(0, 5);
+    if (lastPenalty && lastReward) {
+      recent = new Date(lastPenalty.datetime) >= new Date(lastReward.datetime)
+        ? lastPenalty
+        : lastReward;
+    } else {
+      recent = lastPenalty || lastReward;
+    }
 
     return res.status(200).json({ recent });
 
@@ -35,10 +36,8 @@ export default async function handler(req, res) {
   }
 }
 
-// =============================================
-// 시트 데이터 읽기 (A:D 범위, 2행부터)
-// =============================================
-async function fetchSheet(spreadsheetId, sheetName, token) {
+// 시트의 마지막 행 1건만 반환
+async function fetchLastRow(spreadsheetId, sheetName, token) {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A2:D`;
 
   const response = await fetch(url, {
@@ -51,21 +50,20 @@ async function fetchSheet(spreadsheetId, sheetName, token) {
   }
 
   const data = await response.json();
-  const rows = data.values || [];
+  const rows = (data.values || []).filter(r => r[0]);
+  if (rows.length === 0) return null;
 
-  return rows
-    .filter(r => r[0]) // 날짜 없는 빈 행 제외
-    .map(r => ({
-      datetime:   r[0] || "",
-      studentNum: r[1] || "",
-      item:       r[2] || "",
-      score:      r[3] || "",
-    }));
+  const r = rows[rows.length - 1]; // 마지막 행
+  return {
+    datetime:   r[0] || "",
+    studentNum: r[1] || "",
+    item:       r[2] || "",
+    score:      r[3] || "",
+    type:       sheetName === "벌점기록" ? "벌점" : "상점",
+  };
 }
 
-// =============================================
 // Service Account → OAuth2 Access Token
-// =============================================
 async function getAccessToken(serviceAccount) {
   const now = Math.floor(Date.now() / 1000);
   const header  = { alg: "RS256", typ: "JWT" };
